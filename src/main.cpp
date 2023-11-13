@@ -66,20 +66,24 @@ vEsXCS+0yx5DaMkHJ8HSXPfqIbloEpw8nL+e/IBcm2PN7EeqJSdnoDfzAIJ9VNep
 -----END CERTIFICATE-----
 )";
 
-const char *ssid     = "your ssid";   // Enter SSID
-const char *password = "your password";  // Enter Password
+const char *ssid     = "Buffalo-C130";   // Enter SSID
+const char *password = "nnkxnpshmhai6";  // Enter Password
 
 // Yahoo! finance API endpoint
 String              endpoint("https://query1.finance.yahoo.com/v8/finance/chart/{code}?interval=1d");
 DynamicJsonDocument _doc(HTTP_BUFFER);
 
+M5Canvas canvas;
+
 Ticker timer;
 bool   flag = false;
 
-float _regularMonyOrder  = 0.0;
-float _regularStockPrice = 0.0;
-float _regularNikkeiAVG  = 0.0;
-float _regularTopix      = 0.0;
+typedef struct tagDATA {
+  String name;
+  float  value;
+} DATA;
+
+DATA data[3];
 
 void secondTimer(void) {
   flag = true;
@@ -203,16 +207,16 @@ void initDisplays(void) {
   // Get the number of available displays
   int display_count = M5.getDisplayCount();
 
+  // Displays settings
   for (int i = 0; i < display_count; ++i) {
-    // int textsize = M5.Displays(i).height() / 60;
-    // if (textsize == 0) {
-    //   textsize = 1;
-    // }
     M5.Displays(i).setFont(&fonts::efontJA_24);
     M5.Displays(i).setTextSize(1);
     M5.Displays(i).setTextColor(TFT_WHITE, TFT_BLACK);
     M5.Displays(i).printf("No.%d\n", i);
   }
+
+  canvas.setFont(&fonts::efontJA_24);
+  canvas.setTextSize(1);
 
   // If an external display is to be used as the main display, it can be listed in order of priority.
   M5.setPrimaryDisplayType({m5::board_t::board_M5ModuleRCA});
@@ -222,24 +226,25 @@ void initDisplays(void) {
 }
 
 void getdata(void) {
-  _regularMonyOrder  = getMonyOrder("USDJPY=X");
-  _regularNikkeiAVG  = getStockPrice("^N225");
-  _regularStockPrice = getStockPrice("4442.T");
-}
-
-void showTest(void) {
-  for (int i = 0; i < 2; i++) {
-    M5.Displays(i).setCursor(0, 0);
-    M5.Displays(i).printf("  為替ドル円");
-    M5.Displays(i).printf("   %5.2f円\n", _regularMonyOrder);
-    M5.Displays(i).printf("日経平均株価");
-    M5.Displays(i).printf(" %5.2f円\n", _regularNikkeiAVG);
-    M5.Displays(i).printf("      4442.T");
-    M5.Displays(i).printf("   %5.2f円\n", _regularStockPrice);
-  }
+  data[0].name  = "為替ドル円";
+  data[0].value = getMonyOrder("USDJPY=X");
+  data[1].name  = "日経平均株価";
+  data[1].value = getStockPrice("^N225");
+  data[2].name  = "4442.T";
+  data[2].value = getStockPrice("4442.T");
 }
 
 void showData(void) {
+  for (int i = 0; i < 2; i++) {
+    for (int j = 0; j < 3; j++) {
+      canvas.createSprite(320, 24);
+      canvas.setCursor(0, 0);
+      canvas.printf("%s %5.2f円", data[j].name.c_str(), data[j].value);
+      canvas.drawLine(0, 23, 319, 23, TFT_GREEN);
+      canvas.pushSprite(&M5.Displays(i), 0, 30 * j, TFT_BLACK);
+      canvas.deleteSprite();
+    }
+  }
 }
 
 void setup(void) {
@@ -258,7 +263,11 @@ void loop(void) {
   if (flag) {
     flag = false;
     getdata();
+
+    for (int i = 0; i < 2; i++) {
+      M5.Displays(i).fillScreen(TFT_BLACK);
+    }
   }
-  showTest();
+  showData();
   M5.delay(1);
 }
