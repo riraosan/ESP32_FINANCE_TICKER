@@ -66,8 +66,8 @@ vEsXCS+0yx5DaMkHJ8HSXPfqIbloEpw8nL+e/IBcm2PN7EeqJSdnoDfzAIJ9VNep
 -----END CERTIFICATE-----
 )";
 
-const char *ssid     = "Buffalo-C130";   // Enter SSID
-const char *password = "nnkxnpshmhai6";  // Enter Password
+const char *ssid     = "";  // Enter SSID
+const char *password = "";  // Enter Password
 
 // Yahoo! finance API endpoint
 String              endpoint("https://query1.finance.yahoo.com/v8/finance/chart/{code}?interval=1d");
