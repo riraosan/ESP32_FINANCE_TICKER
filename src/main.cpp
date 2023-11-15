@@ -24,6 +24,7 @@ SOFTWARE.
 
 #include <memory>
 #include <Arduino.h>
+#include <time.h>
 #include <SD.h>
 #include <SPIFFS.h>
 #include <M5ModuleRCA.h>
@@ -68,6 +69,12 @@ vEsXCS+0yx5DaMkHJ8HSXPfqIbloEpw8nL+e/IBcm2PN7EeqJSdnoDfzAIJ9VNep
 
 const char *ssid     = "";  // Enter SSID
 const char *password = "";  // Enter Password
+
+const char *ntpServer          = "ntp.nict.jp";
+const long  gmtOffset_sec      = 9 * 3600;
+const int   daylightOffset_sec = 0;
+struct tm   timeinfo;
+uint8_t     secLastReport = 0;
 
 // Yahoo! finance API endpoint
 String              endpoint("https://query1.finance.yahoo.com/v8/finance/chart/{code}?interval=1d");
@@ -236,15 +243,35 @@ void getdata(void) {
 
 void showData(void) {
   for (int i = 0; i < 2; i++) {
+    // ファイナンス情報
     for (int j = 0; j < 3; j++) {
       canvas.createSprite(320, 24);
       canvas.setCursor(0, 0);
-      canvas.printf("%s %5.2f円", data[j].name.c_str(), data[j].value);
+      canvas.setTextColor(TFT_WHITE, TFT_BLACK);
+      canvas.setTextSize(1);
       canvas.drawLine(0, 23, 319, 23, TFT_GREEN);
+      canvas.pushSprite(&M5.Displays(i), 0, 30 * j, TFT_BLACK);
+      canvas.printf("%s %5.2f円", data[j].name.c_str(), data[j].value);
       canvas.pushSprite(&M5.Displays(i), 0, 30 * j, TFT_BLACK);
       canvas.deleteSprite();
     }
   }
+}
+
+void showTime(void) {
+  for (int i = 0; i < 2; i++) {
+    canvas.createSprite(320, 72);
+    canvas.setCursor(0, 0);
+    canvas.setTextColor(TFT_WHITE, TFT_BLACK);
+    canvas.setTextSize(3);
+    canvas.printf("%02d:%02d:%02d", timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec);
+    canvas.pushSprite(&M5.Displays(i), 15, 130);
+    canvas.deleteSprite();
+  }
+}
+
+void initNTP(void) {
+  configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);  // NTPによる時刻取得
 }
 
 void setup(void) {
@@ -253,6 +280,7 @@ void setup(void) {
   M5.delay(5000);
 
   initWifi();
+  initNTP();
 
   timer.attach(60, secondTimer);
 
@@ -260,14 +288,21 @@ void setup(void) {
 }
 
 void loop(void) {
+  getLocalTime(&timeinfo);
+
   if (flag) {
     flag = false;
     getdata();
-
     for (int i = 0; i < 2; i++) {
       M5.Displays(i).fillScreen(TFT_BLACK);
     }
   }
   showData();
+
+  if (secLastReport != timeinfo.tm_sec) {  // 秒が更新されたら、表示をupdate
+    secLastReport = timeinfo.tm_sec;
+    showTime();
+  }
+
   M5.delay(1);
 }
